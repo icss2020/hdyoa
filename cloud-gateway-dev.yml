@@ -1,0 +1,54 @@
+server:
+  port: 9201
+
+spring:
+  security:
+    basic:
+      enable: false
+    oauth2:
+      client:
+        registration:
+          login-client:
+            provider: uaa
+            client-id: login-client
+            client-secret: secret
+            authorization-grant-type: authorization_code
+            redirect-uri-template: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email,resource.read
+          app-client:
+            authorization-grant-type: client_credentials
+            client-id: internal
+            client-secret: internal
+        provider:
+          uaa:
+            authorization-uri: http://uaaserver:9999/oauth/authorize
+            token-uri: http://uaaserver:9999/oauth/token
+            user-info-uri: http://uaaserver:9999/api/account
+            user-name-attribute: user_name
+            jwk-set-uri: http://uaa/oauth/token_key
+          app-client:
+            token-uri: http://uaaserver:9999/oauth/token
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: sys_route
+          uri: http://localhost:8801
+          predicates:
+            - Path=/api/sys/**
+
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.boot.autoconfigure: INFO
+    org.springframework.cloud.openfeign: INFO
+
