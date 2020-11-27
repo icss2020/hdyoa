@@ -1,7 +1,8 @@
 # ===================================================================
-# Spring Boot configuration for the "dev" profile.
+# Spring Boot configuration.
 #
-# This configuration overrides the application.yml file.
+# This configuration will be overridden by the Spring profile you use,
+# for example application-dev.yml if you use the "dev" profile.
 #
 # More information on profiles: https://www.jhipster.tech/profiles/
 # More information on configuration properties: https://www.jhipster.tech/common-application-properties/
@@ -12,36 +13,54 @@
 # Full reference is available at:
 # http://docs.spring.io/spring-boot/docs/current/reference/html/common-application-properties.html
 # ===================================================================
-
-logging:
-    level:
-        ROOT: INFO
-        io.github.jhipster: INFO
-        com.ecidi.uaa: INFO
-
 eureka:
-    instance:
-        prefer-ip-address: true
     client:
-        service-url:
-            defaultZone: http://admin:admin@eureka:9200/eureka/
+        enabled: true
+        healthcheck:
+            enabled: true
+        fetch-registry: true
+        register-with-eureka: true
+        instance-info-replication-interval-seconds: 10
+        registry-fetch-interval-seconds: 10
+    instance:
+        appname: uaa
+        instanceId: uaa:${spring.application.instance-id:${random.value}}
+        lease-renewal-interval-in-seconds: 5
+        lease-expiration-duration-in-seconds: 10
+        status-page-url-path: ${management.endpoints.web.base-path}/info
+        health-check-url-path: ${management.endpoints.web.base-path}/health
+        metadata-map:
+            zone: primary # This is needed for the load balancer
+            profile: ${spring.profiles.active}
+            version: ${info.project.version:}
+            git-version: ${git.commit.id.describe:}
+            git-commit: ${git.commit.id.abbrev:}
+            git-branch: ${git.branch:}
+            management.context-path: ${server.contextPath}${management.endpoints.web.base-path}
+            user.name: "springbootadmin"
+            user.password: "admin"
+ribbon:
+    eureka:
+        enabled: true
+management:
+    endpoints:
+        web:
+            base-path: /management
+            exposure:
+                include: ["configprops", "env", "health", "info", "threaddump", "logfile", "prometheus" ]
+    endpoint:
+        health:
+            show-details: when-authorized
+    info:
+        git:
+            mode: full
+    health:
+        mail:
+            enabled: false # When using the MailService, configure an SMTP server and set this to true
+    metrics:
+        enabled: false # http://micrometer.io/ is disabled by default, as we use http://metrics.dropwizard.io/ instead
 
 spring:
-    profiles:
-        active: dev
-        include:
-            - swagger
-            # Uncomment to activate TLS for the dev profile
-            #- tls
-    devtools:
-        restart:
-            enabled: true
-            additional-exclude: .h2.server.properties
-        livereload:
-            enabled: false # we use Webpack dev server + BrowserSync for livereload
-    jackson:
-        serialization:
-            indent-output: true
     datasource:
         type: com.zaxxer.hikari.HikariDataSource
         url: jdbc:mariadb://172.18.5.231:3305/microservice_uaa?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=Asia/Shanghai
@@ -49,7 +68,12 @@ spring:
         password: admin123..
         hikari:
             auto-commit: false
-
+    application:
+        name: uaa
+    data:
+        jpa:
+            repositories:
+                bootstrap-mode: deferred
     jpa:
         database-platform: org.hibernate.dialect.MariaDB103Dialect
         database: MYSQL
@@ -64,6 +88,13 @@ spring:
             hibernate.cache.hazelcast.instance_name: uaa
             hibernate.cache.use_minimal_puts: true
             hibernate.cache.hazelcast.use_lite_member: true
+            hibernate.jdbc.time_zone: UTC
+        open-in-view: false
+        hibernate:
+            ddl-auto: none
+            naming:
+                physical-strategy: org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy
+                implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
     liquibase:
         contexts: dev
     mail:
@@ -72,19 +103,41 @@ spring:
         username:
         password:
     messages:
-        cache-duration: PT1S # 1 second, see the ISO 8601 standard
+        basename: i18n/messages
+    main:
+        allow-bean-definition-overriding: true
+    mvc:
+        favicon:
+            enabled: false
+    task:
+        execution:
+            thread-name-prefix: uaa-task-
+            pool:
+                core-size: 2
+                max-size: 50
+                queue-capacity: 10000
+        scheduling:
+            thread-name-prefix: uaa-scheduling-
+            pool:
+                size: 2
     thymeleaf:
-        cache: false
-    redis:
-        database: 3
-        host: 172.18.5.134
-        port: 6379
-        timeout: 5000
-        password: 'passwd'
-
+        mode: HTML
+security:
+    oauth2:
+        resource:
+            filter-order: 3
 
 server:
+    servlet:
+        session:
+            cookie:
+                http-only: true
     port: 9999
+
+# Properties to be exposed on the /info management endpoint
+info:
+    # Comma separated list of profiles that will trigger the ribbon to show
+    display-ribbon-on-profiles: "dev"
 
 # ===================================================================
 # JHipster specific properties
@@ -93,6 +146,29 @@ server:
 # ===================================================================
 
 jhipster:
+    async:
+        core-pool-size: 2
+        max-pool-size: 50
+        queue-capacity: 10000
+    # By default CORS is disabled. Uncomment to enable.
+    #cors:
+        #allowed-origins: "*"
+        #allowed-methods: "*"
+        #allowed-headers: "*"
+        #exposed-headers: "Authorization,Link,X-Total-Count"
+        #allow-credentials: true
+        #max-age: 1800
+    swagger:
+        default-include-pattern: /api/.*
+        title: uaa API
+        description: uaa API documentation
+        version: 0.0.1
+        terms-of-service-url:
+        contact-name:
+        contact-url:
+        contact-email:
+        license:
+        license-url:
     cache: # Cache configuration
         hazelcast: # Hazelcast distributed cache
             time-to-live-seconds: 3600
@@ -128,6 +204,7 @@ jhipster:
             host: localhost
             port: 5000
             queue-size: 512
+
 uaa:
     key-store:
         name: config/tls/keystore.p12
@@ -141,13 +218,3 @@ uaa:
         client-id: login-client
         secret: secret
 
-# ===================================================================
-# Application specific properties
-# Add your own application properties here, see the ApplicationProperties class
-# to have type-safe configuration, like in the JHipsterProperties above
-#
-# More documentation is available at:
-# https://www.jhipster.tech/common-application-properties/
-# ===================================================================
-
-# application:
