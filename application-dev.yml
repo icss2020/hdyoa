@@ -1,0 +1,21 @@
+spring:
+  redis:
+    database: 3
+    host: 172.18.5.134
+    port: 6379
+    timeout: 5000
+    password: 'passwd'
+
+hystrix:
+  command:
+    projecthystrix:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000
+    default:
+      execution:
+        isolation:
+          thread:
+            # 全局熔断器50s超时
+            timeoutInMilliseconds: 50000
